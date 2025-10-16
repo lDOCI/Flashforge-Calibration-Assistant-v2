@@ -1,0 +1,9 @@
+PySide6==6.7.1
+numpy==1.26.4
+matplotlib==3.8.3
+scipy==1.12.0
+paramiko==3.4.0
+python-scp==0.14.5
+Pillow==10.3.0
+tkinterdnd2==0.3.0
+sv-ttk==2.6.0

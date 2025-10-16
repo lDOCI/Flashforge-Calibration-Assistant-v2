@@ -1,0 +1,161 @@
+/* Global application stylesheet for the Flashforge Assistant */
+
+* {
+    color: #F7F9FF;
+    font-family: "SF Pro Text", "Helvetica Neue", "Arial", sans-serif;
+    font-size: 14px;
+}
+
+QWidget {
+    background-color: #0F111A;
+    color: #F7F9FF;
+}
+
+QMainWindow {
+    background-color: #0F111A;
+}
+
+QFrame#TopBar {
+    background-color: rgba(22, 25, 37, 200);
+    border-radius: 14px;
+    padding: 12px;
+}
+
+QLineEdit#SearchField {
+    background-color: #161925;
+    border: 1px solid #2B324A;
+    border-radius: 12px;
+    padding: 8px 14px;
+    color: #F7F9FF;
+    selection-background-color: #5C6BF5;
+}
+
+QLineEdit#SearchField:focus {
+    border: 1px solid #5C6BF5;
+}
+
+QListWidget#SideMenu {
+    background-color: transparent;
+    border: none;
+    outline: none;
+}
+
+QListWidget#SideMenu::item {
+    background-color: transparent;
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin: 4px 4px;
+    color: #B5BAD6;
+}
+
+QListWidget#SideMenu::item:selected {
+    background-color: rgba(92, 107, 245, 0.18);
+    color: #F7F9FF;
+}
+
+QListWidget#SideMenu::item:hover {
+    background-color: rgba(92, 107, 245, 0.35);
+    color: #F7F9FF;
+}
+
+QPushButton {
+    background-color: #1D2132;
+    border: 1px solid rgba(92, 107, 245, 0.25);
+    border-radius: 12px;
+    padding: 8px 16px;
+    color: #F7F9FF;
+}
+
+QPushButton:hover {
+    background-color: rgba(92, 107, 245, 0.25);
+}
+
+QPushButton:pressed {
+    background-color: rgba(92, 107, 245, 0.4);
+}
+
+QPushButton#PrimaryActionButton {
+    background-color: #FF6EA1;
+    color: #0F111A;
+    border: none;
+    border-radius: 14px;
+    padding: 12px 28px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+QPushButton#PrimaryActionButton:hover {
+    background-color: #ff7fb0;
+}
+
+QPushButton#PrimaryActionButton:pressed {
+    background-color: #ff5c96;
+}
+
+QToolButton {
+    background-color: #1D2132;
+    border: 1px solid rgba(92, 107, 245, 0.2);
+    border-radius: 12px;
+    padding: 6px 12px;
+    color: #F7F9FF;
+}
+
+QToolButton:hover {
+    background-color: rgba(92, 107, 245, 0.35);
+}
+
+QToolButton:pressed {
+    background-color: rgba(92, 107, 245, 0.5);
+}
+
+QLabel#Subtitle {
+    color: #B5BAD6;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+}
+
+/* Card widget styling */
+QWidget#Card {
+    background-color: #161925;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+QWidget#Card[variant="accent"] {
+    border: 1px solid rgba(92, 107, 245, 0.4);
+}
+
+QWidget#Card:hover {
+    background-color: #1D2132;
+}
+
+QLabel#CardTitle {
+    font-size: 13px;
+    color: #B5BAD6;
+}
+
+QLabel#CardValue {
+    font-size: 24px;
+    font-weight: 600;
+    color: #FFFFFF;
+}
+
+/* Scroll area */
+QScrollArea {
+    border: none;
+}
+
+QScrollBar:vertical {
+    background: transparent;
+    width: 10px;
+    margin: 4px 0 4px 0;
+}
+
+QScrollBar::handle:vertical {
+    background: rgba(92, 107, 245, 0.45);
+    border-radius: 5px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: rgba(92, 107, 245, 0.7);
+}
