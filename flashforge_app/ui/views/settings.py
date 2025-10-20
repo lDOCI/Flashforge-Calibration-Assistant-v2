@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QUrl
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -21,6 +22,8 @@ from PySide6.QtWidgets import QButtonGroup
 from flashforge_app.services.localization import LocalizationService
 from flashforge_app.services.settings import ApplicationSettings, SettingsService, ThermalPreset
 from flashforge_app.state import AppState
+
+GITHUB_RELEASE_URL = "https://github.com/lDOCI/Flashforge-Calibration-Assistant-v2/releases/latest"
 
 
 class SettingsView(QWidget):
@@ -82,9 +85,12 @@ class SettingsView(QWidget):
         self.save_button.clicked.connect(self._handle_save)
         self.reset_button = QPushButton(self.localization.translate("settings_tab.reset"))
         self.reset_button.clicked.connect(self._handle_reset)
+        self.update_button = QPushButton(self.localization.translate("settings_tab.open_release"))
+        self.update_button.clicked.connect(self._open_release_page)
 
         buttons_layout.addWidget(self.save_button, 0, 0, alignment=Qt.AlignLeft)
         buttons_layout.addWidget(self.reset_button, 0, 1, alignment=Qt.AlignRight)
+        buttons_layout.addWidget(self.update_button, 1, 0, 1, 2, alignment=Qt.AlignLeft)
         layout.addWidget(buttons_frame)
 
         self._refresh_fields()
@@ -93,6 +99,7 @@ class SettingsView(QWidget):
         self.header_label.setText(self.localization.translate("neo_ui.settings.header"))
         self.save_button.setText(self.localization.translate("settings_tab.save"))
         self.reset_button.setText(self.localization.translate("settings_tab.reset"))
+        self.update_button.setText(self.localization.translate("settings_tab.open_release"))
         if self.screw_mode_label:
             self.screw_mode_label.setText(self.localization.translate("settings_tab.screw_mode_label"))
         if self.screw_mode_buttons:
@@ -268,6 +275,9 @@ class SettingsView(QWidget):
         self._refresh_fields()
         self.app_state.update_settings(default)
         QMessageBox.information(self, "", tr("settings_tab.settings_reset"))
+
+    def _open_release_page(self) -> None:
+        QDesktopServices.openUrl(QUrl(GITHUB_RELEASE_URL))
 
     def _refresh_fields(self) -> None:
         hw = self.settings.hardware

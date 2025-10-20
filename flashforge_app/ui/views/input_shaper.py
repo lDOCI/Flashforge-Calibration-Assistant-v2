@@ -209,6 +209,7 @@ class InputShaperView(QWidget):
         self._calibration_data: Dict[str, shaper_calibrate.CalibrationData] = {}
         self._shaper_lists: Dict[str, List] = {}
         self._shaper_objects: Dict[str, List] = {}
+        self._axis_origin: Dict[str, str | None] = {'x': None, 'y': None}
         self._palette = ["#5C6BF5", "#42C29E", "#FF6EA1", "#FFB347", "#8E44AD", "#2ECC71"]
 
         root = QVBoxLayout()
@@ -242,11 +243,15 @@ class InputShaperView(QWidget):
         self.help_button.clicked.connect(self._show_help)
         self.copy_button = QPushButton()
         self.copy_button.clicked.connect(self._copy_config)
+        self.export_button = QPushButton()
+        self.export_button.clicked.connect(self._export_shaper_plots)
+        self.export_button.setEnabled(False)
 
         left_layout.addWidget(self.load_x_button)
         left_layout.addWidget(self.load_y_button)
         left_layout.addWidget(self.help_button)
         left_layout.addWidget(self.copy_button)
+        left_layout.addWidget(self.export_button)
 
         self.status_label = QLabel()
         self.status_label.setObjectName("Subtitle")
@@ -300,6 +305,7 @@ class InputShaperView(QWidget):
         self.load_y_button.setText(tr("shaper_tab.load_y"))
         self.help_button.setText(tr("shaper_tab.what_is_it"))
         self.copy_button.setText(tr("shaper_tab.copy_klipper"))
+        self.export_button.setText(tr("shaper_tab.export_plots"))
         self.axis_info['x'].title_label.setText(tr("shaper_tab.axis_x"))
         self.axis_info['y'].title_label.setText(tr("shaper_tab.axis_y"))
         if not self._results:
@@ -346,6 +352,7 @@ class InputShaperView(QWidget):
         self.axis_info['x'].clear(tr("neo_ui.shaper.no_file"))
         self.axis_info['y'].clear(tr("neo_ui.shaper.no_file"))
         self.summary_label.setText(tr("neo_ui.shaper.result_placeholder"))
+        self._update_export_button()
 
     # ------------------------------------------------------------------ UI actions
     def _trigger_load_dialog(self, axis: str | None = None) -> None:
@@ -363,6 +370,44 @@ class InputShaperView(QWidget):
     def _show_help(self) -> None:
         QMessageBox.information(self, self.localization.translate("neo_ui.common.information"), self.localization.translate("shaper_tab.help_text"))
 
+    def _export_shaper_plots(self) -> None:
+        tr = self.localization.translate
+        available: list[tuple[str, Figure]] = []
+        for axis in ('x', 'y'):
+            canvas = self.axis_plots[axis].canvas
+            if canvas:
+                available.append((axis, canvas.figure))
+
+        if not available:
+            QMessageBox.information(
+                self,
+                tr("neo_ui.common.information"),
+                tr("shaper_tab.export_no_data"),
+            )
+            return
+
+        target_dir = QFileDialog.getExistingDirectory(
+            self,
+            tr("shaper_tab.export_dialog"),
+            str(Path.home()),
+        )
+        if not target_dir:
+            return
+
+        saved_paths: list[Path] = []
+        target_path = Path(target_dir)
+        for axis, figure in available:
+            filename = target_path / f"input_shaper_{axis.upper()}.png"
+            figure.savefig(filename)
+            saved_paths.append(filename)
+
+        formatted_paths = "\n".join(str(path) for path in saved_paths)
+        QMessageBox.information(
+            self,
+            tr("neo_ui.common.success"),
+            tr("shaper_tab.export_success").format(paths=formatted_paths),
+        )
+
     # ------------------------------------------------------------------ data handling
     def load_csv_file(self, path: Path, axis_hint: Optional[str] = None) -> bool:
         tr = self.localization.translate
@@ -372,9 +417,13 @@ class InputShaperView(QWidget):
             QMessageBox.warning(self, tr("Warning"), tr("shaper_tab.error_loading").format(str(exc)))
             return False
 
-        axis = axis_hint or self._infer_axis_from_filename(path)
-        if axis not in {'x', 'y'}:
-            axis = 'x' if 'x' not in self._calibration_data else 'y'
+        firmware_axis = axis_hint or self._infer_axis_from_filename(path)
+        if firmware_axis not in {'x', 'y'}:
+            firmware_axis = 'x' if 'x' not in self._calibration_data else 'y'
+
+        axis = self._map_firmware_axis(firmware_axis)
+        if firmware_axis != axis:
+            print(f"[InputShaper] Remapping firmware axis '{firmware_axis}' to UI axis '{axis}' for file {path.name}")
 
         result = self._analyze_axis(axis, raw_data)
         if result:
@@ -382,6 +431,7 @@ class InputShaperView(QWidget):
             self._results[axis] = (shaper, freq)
             self._calibration_data[axis] = calibration_data
             self._shaper_lists[axis] = entries
+            self._axis_origin[axis] = firmware_axis
             axis_title = self.localization.translate("shaper_tab.axis_x") if axis == 'x' else self.localization.translate("shaper_tab.axis_y")
             for entry in entries:
                 entry['selected'] = entry['name'].upper() == shaper
@@ -390,7 +440,10 @@ class InputShaperView(QWidget):
                 entries,
             )
             self._update_summary()
-            self.status_label.setText(tr("neo_ui.shaper.status.loaded").format(file=path.name))
+            suffix = ""
+            if firmware_axis != axis:
+                suffix = f" → UI axis {axis.upper()}"
+            self.status_label.setText(tr("neo_ui.shaper.status.loaded").format(file=f"{path.name}{suffix}"))
             self.csv_loaded.emit(path)
             return True
         return False
@@ -402,6 +455,17 @@ class InputShaperView(QWidget):
         if 'axis_y' in name or '_y' in name or '-y' in name:
             return 'y'
         return None
+
+    @staticmethod
+    def _map_firmware_axis(axis: str) -> str:
+        """
+        Flashforge прошивки путают X/Y, поэтому для UI меняем оси местами.
+        """
+        if axis == 'x':
+            return 'y'
+        if axis == 'y':
+            return 'x'
+        return axis
 
     def _analyze_axis(self, axis: str, data) -> Optional[tuple[str, float, shaper_calibrate.CalibrationData, List[dict]]]:
         try:
@@ -500,12 +564,12 @@ class InputShaperView(QWidget):
         tr = self.localization.translate
         for entry in entries:
             entry['selected'] = entry['name'].upper() == shaper
-        axis_title = tr("shaper_tab.axis_x") if axis == 'x' else tr("shaper_tab.axis_y")
-        self._results[axis] = (shaper, freq)
-        self.axis_info[axis].update_info(
-            tr("neo_ui.shaper.recommend_line").format(axis=axis_title, shaper=shaper, freq=freq),
-            entries,
-        )
+            axis_title = tr("shaper_tab.axis_x") if axis == 'x' else tr("shaper_tab.axis_y")
+            self._results[axis] = (shaper, freq)
+            self.axis_info[axis].update_info(
+                tr("neo_ui.shaper.recommend_line").format(axis=axis_title, shaper=shaper, freq=freq),
+                entries,
+            )
         if axis in self._calibration_data and axis in self._shaper_objects:
             self._plot_axis(axis, self._calibration_data[axis], self._shaper_objects[axis], (shaper, freq))
         self._update_summary()
@@ -514,6 +578,7 @@ class InputShaperView(QWidget):
         tr = self.localization.translate
         if not self._results:
             self.summary_label.setText(tr("neo_ui.shaper.result_placeholder"))
+            self._update_export_button()
             return
         summary_lines = [
             tr("neo_ui.shaper.summary_line").format(
@@ -524,3 +589,8 @@ class InputShaperView(QWidget):
             for axis, info in self._results.items()
         ]
         self.summary_label.setText("\n".join(summary_lines))
+        self._update_export_button()
+
+    def _update_export_button(self) -> None:
+        has_plots = any(self.axis_plots[axis].canvas for axis in ('x', 'y'))
+        self.export_button.setEnabled(has_plots)

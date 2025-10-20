@@ -117,7 +117,11 @@
     "input_shaper_title": "What is Input Shaper?",
     "perform_analysis_first": "Perform analysis first!",
     "select_csv": "Select CSV file for axis {axis}",
-    "error_loading": "Error loading file:\n{}"
+    "error_loading": "Error loading file:\n{}",
+    "export_plots": "Export shaper plots",
+    "export_dialog": "Choose folder for shaper plots",
+    "export_success": "Plots saved:\n{paths}",
+    "export_no_data": "No plots available yet. Load accelerometer data first."
   },
   "settings_tab": {
     "hardware": "Hardware",
@@ -166,6 +170,7 @@
     "enable_belt": "Stage 1 – Adjust Z lead screws",
     "enable_screws": "Stage 2 – Adjust screws",
     "enable_tape": "Stage 3 – Apply tape",
+    "open_release": "Check updates (opens releases)",
     "save": "Save",
     "reset": "Reset",
     "settings_saved": "Settings saved",

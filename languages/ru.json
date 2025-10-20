@@ -118,7 +118,11 @@
     "input_shaper_title": "Что такое Input Shaper?",
     "perform_analysis_first": "Сначала выполните анализ!",
     "select_csv": "Выберите CSV-файл для оси {axis}",
-    "error_loading": "Ошибка загрузки файла:\n{}"
+    "error_loading": "Ошибка загрузки файла:\n{}",
+    "export_plots": "Экспорт графиков шейперов",
+    "export_dialog": "Выберите папку для сохранения графиков",
+    "export_success": "Графики сохранены:\n{paths}",
+    "export_no_data": "Нет данных для экспорта. Сначала загрузите CSV."
   },
   "settings_tab": {
     "hardware": "Оборудование",
@@ -167,6 +171,7 @@
     "enable_belt": "Этап 1 — регулировка Z-валов",
     "enable_screws": "Этап 2 — регулировка винтов",
     "enable_tape": "Этап 3 — наклейка скотча",
+    "open_release": "Проверить обновления (открыть релизы)",
     "save": "Сохранить",
     "reset": "Сбросить",
     "settings_saved": "Настройки сохранены",
