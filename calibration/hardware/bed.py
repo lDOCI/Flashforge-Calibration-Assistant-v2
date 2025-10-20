@@ -117,32 +117,19 @@ class Bed:
     
     def generate_ideal_plane(self) -> np.ndarray:
         """
-        Генерация идеальной плоскости на основе текущих данных сетки
-        с использованием метода наименьших квадратов
-        
-        Returns:
-            np.ndarray: Идеальная плоскость того же размера, что и mesh_data
+        Возвращает горизонтальную плоскость на уровне средней высоты сетки.
+
+        Раньше метод подбирал наклонённую плоскость по МНК. Однако для задач
+        выравнивания нам нужна именно цель «горизонтальный стол», поэтому
+        используем константную плоскость с высотой, равной среднему значению
+        всей сетки. Это заставляет все дальнейшие расчёты стремиться к
+        реальному выравниванию, а не к сохранению текущего наклона.
         """
         if self.mesh_data is None:
             raise ValueError("Данные сетки не установлены")
-            
-        # Создаем сетку координат X, Y
-        x = np.arange(self.config.mesh_points_x)
-        y = np.arange(self.config.mesh_points_y)
-        X, Y = np.meshgrid(x, y)
-        
-        # Преобразуем к формату для решения системы уравнений
-        A = np.column_stack((X.flatten(), Y.flatten(), np.ones_like(X.flatten())))
-        b = self.mesh_data.flatten()
-        
-        # Решаем систему уравнений методом наименьших квадратов
-        # для нахождения коэффициентов плоскости ax + by + c = z
-        coeffs, _, _, _ = np.linalg.lstsq(A, b, rcond=None)
-        
-        # Генерируем идеальную плоскость с полученными коэффициентами
-        ideal_plane = (coeffs[0] * X + coeffs[1] * Y + coeffs[2]).reshape(self.mesh_data.shape)
-        
-        return ideal_plane
+
+        mean_height = float(np.mean(self.mesh_data))
+        return np.full_like(self.mesh_data, mean_height, dtype=float)
     
     def calculate_deviation_map(self) -> np.ndarray:
         """

@@ -60,6 +60,20 @@ class AppState:
         self.current_settings = settings
         self.save_settings()
         if self.workspace:
+            hw = settings.hardware
+            thresholds = settings.thresholds
+            screw_config = ScrewConfig(
+                pitch=hw.screw_pitch,
+                min_adjust=hw.min_adjustment,
+                max_adjust=hw.max_adjustment,
+            )
+
+            self.workspace.screw_solver.set_screw_config(screw_config)
+            self.workspace.analyzer.set_screw_config(screw_config)
+            self.workspace.analyzer.screw_threshold = thresholds.screw_threshold
+            self.workspace.analyzer.tape_threshold = thresholds.tape_threshold
+            self.workspace.tape_calculator.tape_thickness = hw.tape_thickness
+            self.workspace.tape_calculator.min_height_diff = thresholds.tape_threshold
             self._compute_workflow()
 
     # ------------------------------------------------------------------ Bed handling
