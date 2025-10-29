@@ -42,7 +42,7 @@ numpy          # расчёты матриц и сеток
 matplotlib     # графики и анимации
 scipy          # интерполяции и сглаживание
 paramiko       # SSH
-python-scp     # загрузка файлов с принтера
+scp     # загрузка файлов с принтера
 Pillow         # статика и Tk-визуализации
 tkinterdnd2    # drag & drop в legacy UI
 sv-ttk         # темы для Tk
