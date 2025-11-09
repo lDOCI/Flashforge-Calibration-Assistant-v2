@@ -1,0 +1,142 @@
+/* Light theme stylesheet */
+
+* {
+    color: #1C1E24;
+    font-family: "SF Pro Text", "Helvetica Neue", "Arial", sans-serif;
+    font-size: 14px;
+}
+
+QWidget {
+    background-color: #F5F7FB;
+    color: #1C1E24;
+}
+
+QMainWindow {
+    background-color: #F5F7FB;
+}
+
+QFrame#TopBar {
+    background-color: rgba(255, 255, 255, 0.85);
+    border-radius: 14px;
+    padding: 12px;
+    border: 1px solid rgba(28, 30, 36, 0.08);
+}
+
+QLineEdit#SearchField {
+    background-color: #FFFFFF;
+    border: 1px solid rgba(28, 30, 36, 0.12);
+    border-radius: 12px;
+    padding: 8px 14px;
+    color: #1C1E24;
+    selection-background-color: #5C6BF5;
+}
+
+QLineEdit#SearchField:focus {
+    border: 1px solid #5C6BF5;
+}
+
+QListWidget#SideMenu {
+    background-color: transparent;
+    border: none;
+    outline: none;
+}
+
+QListWidget#SideMenu::item {
+    background-color: transparent;
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin: 4px 4px;
+    color: #5D6476;
+}
+
+QListWidget#SideMenu::item:selected {
+    background-color: rgba(92, 107, 245, 0.18);
+    color: #1C1E24;
+}
+
+QListWidget#SideMenu::item:hover {
+    background-color: rgba(92, 107, 245, 0.35);
+    color: #1C1E24;
+}
+
+QFrame#Card {
+    background-color: #FFFFFF;
+    border-radius: 18px;
+    border: 1px solid rgba(28, 30, 36, 0.08);
+}
+
+QWidget#Card {
+    background-color: #FFFFFF;
+    border-radius: 18px;
+    border: 1px solid rgba(28, 30, 36, 0.08);
+}
+
+QPushButton {
+    background-color: #FFFFFF;
+    border: 1px solid rgba(28, 30, 36, 0.12);
+    border-radius: 12px;
+    padding: 8px 16px;
+    color: #1C1E24;
+}
+
+QPushButton:hover {
+    background-color: rgba(92, 107, 245, 0.15);
+}
+
+QPushButton:pressed {
+    background-color: rgba(92, 107, 245, 0.25);
+}
+
+QPushButton#PrimaryActionButton {
+    background-color: #5C6BF5;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 14px;
+    padding: 12px 28px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+QPushButton#PrimaryActionButton:hover {
+    background-color: #6f79f7;
+}
+
+QPushButton#PrimaryActionButton:pressed {
+    background-color: #4a5de5;
+}
+
+QToolButton {
+    background-color: #FFFFFF;
+    border: 1px solid rgba(28, 30, 36, 0.12);
+    border-radius: 12px;
+    padding: 6px 12px;
+    color: #1C1E24;
+}
+
+QToolButton:hover {
+    background-color: rgba(92, 107, 245, 0.15);
+}
+
+QToolButton:pressed {
+    background-color: rgba(92, 107, 245, 0.25);
+}
+
+QScrollBar:vertical {
+    background: transparent;
+    width: 10px;
+    margin: 4px 0 4px 0;
+}
+
+QScrollBar::handle:vertical {
+    background: rgba(92, 107, 245, 0.45);
+    border-radius: 5px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: rgba(92, 107, 245, 0.7);
+}
+
+QTextEdit#Subtitle {
+    color: #5D6476;
+}
+

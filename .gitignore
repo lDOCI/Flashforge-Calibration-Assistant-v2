@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# macOS
+.DS_Store
+
+# Virtual environments
+.venv/
+
+# Local configs
+temp/
+logs/
+config/app_settings.json
+config/printer.cfg
+config/settings.json
+
+# IDE
+.idea/
+.vscode/
+

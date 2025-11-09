@@ -1,0 +1,461 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Guided visual recommendations for leveling Adventurer 5M."""
+
+from __future__ import annotations
+
+import tkinter as tk
+from tkinter import ttk, messagebox
+from typing import Dict, List, Optional, Sequence
+
+import numpy as np
+from matplotlib import patches
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+from matplotlib.patches import FancyArrowPatch
+
+from app.ui.language import _
+from visualization.widgets.custom_toolbars import MinimalNavigationToolbar
+from visualization.bed_mesh.animated_recommendations import ScrewAdjustmentVisualizer
+from calibration.workflow import WorkflowData, StageResult, StageAction
+
+
+class VisualRecommendationsWindow:
+    """Compact step-by-step assistant for bed leveling."""
+
+    def __init__(self, main_window, bed, analyzer, screw_solver, tape_calculator):
+        self.main = main_window
+        self.bed = bed
+        self.analyzer = analyzer
+        self.screw_solver = screw_solver
+        self.tape_calculator = tape_calculator
+
+        workflow = self.main.get_workflow_data(recompute=True)
+        if workflow is None:
+            messagebox.showwarning(_("Warning"), _("bed_tab.warning_load_first"))
+            return
+
+        self.workflow: WorkflowData = workflow
+        self.settings = self.main.settings_tab.get_settings()
+        self.environment = self.settings.get('environment', {})
+        self.show_minutes = self.settings['visualization'].get('show_minutes', True)
+        self.show_degrees = self.settings['visualization'].get('show_degrees', True)
+        self.is_dark_theme = self.main.app_settings.get('theme', 'light') == 'dark'
+
+        self.stage_order: List[str] = [stage.key for stage in self.workflow.stages if stage.enabled or stage.key in {'before'}]
+        if not self.stage_order:
+            self.stage_order = [self.workflow.stages[0].key]
+        preferred = next((key for key in ['after_belts', 'after_screws', 'after_tape'] if key in self.stage_order), self.stage_order[0])
+
+        self.current_stage_key = preferred
+        self.stage_var = tk.StringVar(value=self.current_stage_key)
+
+        self.figure = Figure(figsize=(6.6, 5.4), dpi=100)
+        self.ax = self.figure.add_subplot(111)
+        self.ax.set_aspect('equal')
+        self.heatmap = None
+        self.overlay_artists: List = []
+        self.canvas: Optional[FigureCanvasTkAgg] = None
+        self.toolbar: Optional[MinimalNavigationToolbar] = None
+        self.screw_visualizer = ScrewAdjustmentVisualizer(is_dark_theme=self.is_dark_theme)
+        self.screw_canvas: Optional[FigureCanvasTkAgg] = None
+
+        self.window = tk.Toplevel(self.main.root)
+        self.window.title(_("visual_rec.title"))
+        self.window.geometry("1260x820")
+        self.window.minsize(1100, 760)
+        self.window.transient(self.main.root)
+
+        self._build_layout()
+        self._populate_stage_list()
+        self._update_stage_view()
+
+    # ---------------------------------------------------------------- layout
+    def _build_layout(self) -> None:
+        container = ttk.Frame(self.window, padding=12)
+        container.pack(fill=tk.BOTH, expand=True)
+        container.columnconfigure(0, weight=0)
+        container.columnconfigure(1, weight=1)
+        container.rowconfigure(0, weight=1)
+
+        # Stage navigation ----------------------------------------------------
+        nav_frame = ttk.Frame(container)
+        nav_frame.grid(row=0, column=0, sticky='ns', padx=(0, 12))
+        ttk.Label(nav_frame, text=_("visual_rec.stage_summary"), style='Header.TLabel').pack(anchor='w', pady=(0, 8))
+
+        for key in self.stage_order:
+            stage = self._stage(key)
+            text = _(stage.label)
+            btn = ttk.Radiobutton(
+                nav_frame,
+                text=text,
+                value=key,
+                variable=self.stage_var,
+                command=self._on_stage_change,
+                style='Toolbutton',
+            )
+            btn.pack(anchor='w', fill=tk.X, pady=4)
+
+        ttk.Separator(nav_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=12)
+        ttk.Label(nav_frame, text=_('visual_rec.instructions_short'), wraplength=200, justify=tk.LEFT).pack(anchor='w')
+
+        # Content column ------------------------------------------------------
+        content = ttk.Frame(container)
+        content.grid(row=0, column=1, sticky='nsew')
+        content.columnconfigure(0, weight=1)
+        content.rowconfigure(3, weight=1)
+
+        self.stage_title_label = ttk.Label(content, style='Header.TLabel')
+        self.stage_title_label.grid(row=0, column=0, sticky='w')
+
+        self.stage_desc_label = ttk.Label(content, style='Info.TLabel', wraplength=700, justify=tk.LEFT)
+        self.stage_desc_label.grid(row=1, column=0, sticky='w', pady=(4, 10))
+
+        self.warning_frame = ttk.Frame(content)
+        self.warning_frame.grid(row=2, column=0, sticky='ew')
+
+        body = ttk.Frame(content)
+        body.grid(row=3, column=0, sticky='nsew')
+        body.columnconfigure(0, weight=3)
+        body.columnconfigure(1, weight=2)
+        body.rowconfigure(0, weight=1)
+
+        # Plot area -----------------------------------------------------------
+        plot_frame = ttk.Frame(body)
+        plot_frame.grid(row=0, column=0, sticky='nsew', padx=(0, 12))
+        plot_frame.columnconfigure(0, weight=1)
+        plot_frame.rowconfigure(0, weight=1)
+
+        self.canvas = FigureCanvasTkAgg(self.figure, master=plot_frame)
+        self.canvas.get_tk_widget().grid(row=0, column=0, sticky='nsew')
+
+        toolbar_container = ttk.Frame(plot_frame)
+        toolbar_container.grid(row=1, column=0, sticky='ew')
+        self.toolbar = MinimalNavigationToolbar(self.canvas, toolbar_container)
+        self.toolbar.update()
+
+        # Instruction area ---------------------------------------------------
+        info_frame = ttk.Frame(body)
+        info_frame.grid(row=0, column=1, sticky='nsew')
+        info_frame.columnconfigure(0, weight=1)
+        info_frame.rowconfigure(1, weight=1)
+
+        self.instructions_header = ttk.Label(info_frame, style='Header.TLabel')
+        self.instructions_header.grid(row=0, column=0, sticky='w')
+
+        self.instructions_text = tk.Text(info_frame, height=16, wrap='word', relief=tk.FLAT, bg=self.window.cget('bg'))
+        self.instructions_text.grid(row=1, column=0, sticky='nsew', pady=(6, 0))
+        self.instructions_text.configure(state='disabled')
+
+        self.action_buttons_frame = ttk.Frame(info_frame)
+        self.action_buttons_frame.grid(row=2, column=0, sticky='ew', pady=(8, 0))
+
+        close_button = ttk.Button(self.window, text=_('Close'), command=self.window.destroy, style='Action.TButton')
+        close_button.pack(pady=(6, 12))
+
+    # ---------------------------------------------------------------- events
+    def _populate_stage_list(self) -> None:
+        pass  # navigation built in _build_layout
+
+    def _on_stage_change(self) -> None:
+        key = self.stage_var.get()
+        if key == self.current_stage_key:
+            return
+        self.current_stage_key = key
+        self._update_stage_view()
+
+    # ---------------------------------------------------------------- update
+    def _update_stage_view(self) -> None:
+        stage = self._stage(self.current_stage_key)
+        self.stage_title_label.configure(text=_(stage.label))
+        self.stage_desc_label.configure(text=_(stage.description))
+
+        self._update_warnings(stage)
+        self._update_plot(stage)
+        self._update_instructions(stage)
+
+    def _update_warnings(self, stage: StageResult) -> None:
+        for child in self.warning_frame.winfo_children():
+            child.destroy()
+
+        messages = [_(warning) for warning in stage.warnings if _(warning)]
+        if not stage.enabled:
+            messages.insert(0, _("visual_rec.stage_disabled"))
+
+        if not messages:
+            return
+
+        frame = ttk.LabelFrame(self.warning_frame, text=_('Warning'))
+        frame.pack(fill=tk.X, pady=(0, 8))
+        for msg in messages:
+            ttk.Label(frame, text=msg, wraplength=620, justify=tk.LEFT).pack(anchor='w', padx=8, pady=2)
+
+    # ---------------------------------------------------------------- plot
+    def _update_plot(self, stage: StageResult) -> None:
+        mesh = np.array(stage.mesh, dtype=float)
+        centred = mesh - np.mean(mesh)
+        vmax = float(np.max(np.abs(centred)))
+        if vmax < 1e-6:
+            vmax = 1.0
+
+        self.ax.clear()
+        self.ax.set_aspect('equal')
+        self.ax.grid(color='#9c9c9c', linestyle=':', linewidth=0.4, alpha=0.6)
+        self.ax.set_xticks(range(mesh.shape[1]))
+        self.ax.set_yticks(range(mesh.shape[0]))
+        self.ax.set_xticklabels([chr(65 + i) for i in range(mesh.shape[1])])
+        self.ax.set_yticklabels([str(i + 1) for i in range(mesh.shape[0])])
+        self.heatmap = self.ax.imshow(centred, cmap='RdBu_r', origin='lower', vmin=-vmax, vmax=vmax)
+        self.ax.set_title(_("visualization.bed_mesh_title").format(vmax))
+
+        self._draw_stage_overlays(stage)
+        self.canvas.draw_idle()
+
+    def _draw_stage_overlays(self, stage: StageResult) -> None:
+        if stage.key == 'after_belts':
+            self._draw_belt_overlays(stage.actions)
+        elif stage.key == 'after_screws':
+            self._draw_screw_overlays(stage.actions)
+        elif stage.key == 'after_tape':
+            self._draw_tape_overlays(stage.actions)
+        elif stage.key == 'after_temperature':
+            self._draw_temperature_overlay(stage)
+
+    def _draw_belt_overlays(self, actions: Sequence[StageAction]) -> None:
+        coords = {
+            'front_left': (0, 0),
+            'front_right': (0, self.bed.config.mesh_points_y - 1),
+            'back': (self.bed.config.mesh_points_x - 1, self.bed.config.mesh_points_y // 2),
+        }
+
+        for action in actions:
+            position = coords.get(action.identifier)
+            if not position:
+                continue
+            row, col = position
+            color = '#e74c3c' if action.direction == 'up' else '#2980b9'
+            self.ax.scatter(col, row, s=230, c=color, edgecolors='white', linewidths=1.6, zorder=5)
+
+            delta = 0.9 if action.direction == 'up' else -0.9
+            arrow = FancyArrowPatch((col, row), (col, row + delta), arrowstyle='-|>', mutation_scale=16, linewidth=1.5, color=color, zorder=6)
+            self.ax.add_patch(arrow)
+
+            info = []
+            if action.teeth:
+                info.append(_("visual_rec.belt_teeth_count").format(count=action.teeth))
+            if action.magnitude_mm is not None:
+                info.append(_("visual_rec.height_delta").format(value=action.magnitude_mm))
+            if info:
+                self.ax.text(col + 0.15, row + 0.15, '\n'.join(info), fontsize=9, color='white', fontweight='bold', bbox=dict(facecolor=color, alpha=0.85, boxstyle='round,pad=0.25'), zorder=6)
+
+    def _draw_screw_overlays(self, actions: Sequence[StageAction]) -> None:
+        corners = {
+            'front_left': (0, 0),
+            'front_right': (0, self.bed.config.mesh_points_y - 1),
+            'back_left': (self.bed.config.mesh_points_x - 1, 0),
+            'back_right': (self.bed.config.mesh_points_x - 1, self.bed.config.mesh_points_y - 1),
+        }
+        for action in actions:
+            position = corners.get(action.identifier)
+            if not position:
+                continue
+            row, col = position
+            color = '#f39c12' if action.direction == 'counterclockwise' else '#8e44ad'
+            self.ax.scatter(col, row, s=260, c=color, edgecolors='white', linewidths=1.8, zorder=5)
+            glyph = '↺' if action.direction == 'counterclockwise' else '↻'
+            self.ax.text(col, row, glyph, fontsize=22, fontweight='bold', color='white', ha='center', va='center', zorder=6)
+
+    def _draw_tape_overlays(self, actions: Sequence[StageAction]) -> None:
+        for action in actions:
+            coord = self._parse_grid_coordinate(action.identifier)
+            if coord is None:
+                continue
+            row, col = coord
+            layers = int(action.metadata.get('layers', 1))
+            rect = patches.Rectangle((col - 0.45, row - 0.45), 0.9, 0.9, facecolor='#f1c40f', edgecolor='#e67e22', alpha=min(0.45 + layers * 0.1, 0.9), linewidth=1.5)
+            self.ax.add_patch(rect)
+            self.ax.text(col, row, str(layers), fontsize=12, fontweight='bold', color='#2c3e50', ha='center', va='center')
+
+    def _draw_temperature_overlay(self, stage: StageResult) -> None:
+        idx = self.stage_order.index(stage.key)
+        if idx == 0:
+            return
+        prev_mesh = np.array(self._stage(self.stage_order[idx - 1]).mesh, dtype=float)
+        delta = np.array(stage.mesh, dtype=float) - prev_mesh
+        if np.allclose(delta, 0.0):
+            return
+        contour = self.ax.contour(delta, levels=6, colors='#16a085', linewidths=1.0, alpha=0.85)
+        self.ax.clabel(contour, inline=True, fontsize=8, fmt='%0.3f')
+
+    # --------------------------------------------------------------- instruct
+    def _update_instructions(self, stage: StageResult) -> None:
+        for child in self.action_buttons_frame.winfo_children():
+            child.destroy()
+        self._clear_screw_canvas()
+
+        if stage.key == 'after_belts':
+            header = _("visual_rec.belt_stage_title")
+            lines = self._build_belt_instructions(stage)
+        elif stage.key == 'after_screws':
+            header = _("visual_rec.screw_header")
+            lines = self._build_screw_instructions(stage)
+            self._show_screw_canvas(stage)
+        elif stage.key == 'after_tape':
+            header = _("visual_rec.tape_header")
+            lines = self._build_tape_instructions(stage)
+        elif stage.key == 'after_temperature':
+            header = _("visual_rec.stage_temperature")
+            lines = self._build_temperature_instructions(stage)
+        else:
+            header = _("visual_rec.stage_initial")
+            lines = self._build_initial_instructions(stage)
+
+        self.instructions_header.configure(text=header)
+        self._set_instructions_text(lines)
+
+    def _set_instructions_text(self, lines: Sequence[str]) -> None:
+        text = '\n'.join(lines)
+        self.instructions_text.configure(state='normal')
+        self.instructions_text.delete('1.0', tk.END)
+        self.instructions_text.insert(tk.END, text)
+        self.instructions_text.configure(state='disabled')
+
+    def _build_initial_instructions(self, stage: StageResult) -> List[str]:
+        base_delta = float(np.max(stage.mesh) - np.min(stage.mesh))
+        return [
+            _("visual_rec.stage_initial_details"),
+            '',
+            _("visual_rec.stage_delta").format(value=base_delta),
+            _("visual_rec.instructions_heatmap_hint"),
+        ]
+
+    def _build_belt_instructions(self, stage: StageResult) -> List[str]:
+        lines = [_('visual_rec.belt_stage_description')]
+        if not stage.enabled:
+            lines.append(_("visual_rec.stage_disabled"))
+            return lines
+        if not stage.actions:
+            lines.append(_("visual_rec.belt_no_adjustments"))
+            return lines
+
+        for action in stage.actions:
+            corner = self._translate_corner(action.identifier)
+            direction_text = _('visual_rec.belt_direction_up') if action.direction == 'up' else _('visual_rec.belt_direction_down')
+            action_text = _('visual_rec.belt_action_tighten') if action.metadata.get('sign', 1.0) >= 0 else _('visual_rec.belt_action_loosen')
+            lines.append(f"• {corner}: {action_text}, {direction_text}")
+            if action.teeth:
+                lines.append("  → " + _("visual_rec.belt_teeth_count").format(count=action.teeth))
+            if action.magnitude_mm is not None:
+                lines.append("  → " + _("visual_rec.height_delta").format(value=action.magnitude_mm))
+        lines.append('')
+        lines.append(_("visual_rec.belt_extra_tip"))
+        return lines
+
+    def _build_screw_instructions(self, stage: StageResult) -> List[str]:
+        lines = [_('visual_rec.stage_screw_details')]
+        if not stage.enabled:
+            lines.append(_("visual_rec.stage_disabled"))
+            return lines
+        if not stage.actions:
+            lines.append(_("visual_rec.screw_no_adjustments"))
+            return lines
+
+        for action in stage.actions:
+            corner = self._translate_corner(action.identifier)
+            direction = _('visual_rec.counterclockwise') if action.direction == 'counterclockwise' else _('visual_rec.clockwise')
+            pieces = [f"• {corner}: {direction}"]
+            if self.show_minutes and action.minutes is not None:
+                pieces.append(_('visual_rec.minutes_label').format(value=action.minutes))
+            if self.show_degrees and action.degrees is not None:
+                pieces.append(_('visual_rec.degrees_label').format(value=action.degrees))
+            turns = action.metadata.get('turns')
+            if turns is not None:
+                pieces.append(_('visual_rec.screw_turns').format(value=turns))
+            lines.append(' — '.join(pieces))
+        lines.append('')
+        lines.append(_('visual_rec.screw_animation_hint'))
+        return lines
+
+    def _build_tape_instructions(self, stage: StageResult) -> List[str]:
+        lines = [_('visual_rec.stage_tape_details')]
+        if not stage.enabled:
+            lines.append(_("visual_rec.stage_disabled"))
+            return lines
+        if not stage.actions:
+            lines.append(_("visual_rec.tape_no_adjustments"))
+            return lines
+
+        for action in stage.actions:
+            layers = action.metadata.get('layers', 1)
+            thickness = action.metadata.get('thickness', layers * self.settings['hardware']['tape_thickness'])
+            lines.append(f"• {action.label}: {layers} × ({thickness:.2f} mm)")
+        lines.append('')
+        lines.extend([
+            _('visual_rec.tape_instruction_1'),
+            _('visual_rec.tape_instruction_2'),
+            _('visual_rec.tape_instruction_3'),
+            _('visual_rec.tape_instruction_4'),
+        ])
+        return lines
+
+    def _build_temperature_instructions(self, stage: StageResult) -> List[str]:
+        measurement = float(self.environment.get('measurement_temp', 25.0))
+        target = float(self.environment.get('target_temp', measurement))
+        coeff = float(self.environment.get('thermal_expansion_coeff', 5.0e-5))
+        delta_t = target - measurement
+        span = self.bed.config.size_x
+        expected_warp = abs(delta_t) * coeff * span
+        lines = [_('visual_rec.stage_temperature_details')]
+        if not stage.enabled:
+            lines.append(_("visual_rec.temperature_no_adjustments"))
+            return lines
+        lines.append(_('visual_rec.temperature_instructions').format(measurement=measurement, target=target, coeff=coeff))
+        lines.append(_('visual_rec.temperature_expected').format(delta=expected_warp))
+        lines.append(_('visual_rec.temperature_tip'))
+        return lines
+
+    # ----------------------------------------------------------- screw figure
+    def _show_screw_canvas(self, stage: StageResult) -> None:
+        adjustments = {}
+        for action in stage.actions:
+            if action.minutes is None or action.direction is None:
+                continue
+            adjustments[action.identifier] = (action.minutes, action.direction)
+        if not adjustments:
+            return
+        figure = self.screw_visualizer.create_adjustment_figure(adjustments)
+        self.screw_canvas = FigureCanvasTkAgg(figure, master=self.action_buttons_frame)
+        self.screw_canvas.draw()
+        self.screw_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+    def _clear_screw_canvas(self) -> None:
+        if self.screw_canvas:
+            self.screw_canvas.get_tk_widget().destroy()
+            self.screw_canvas = None
+
+    # -------------------------------------------------------------- utilities
+    def _stage(self, key: str) -> StageResult:
+        return next(stage for stage in self.workflow.stages if stage.key == key)
+
+    @staticmethod
+    def _parse_grid_coordinate(token: str) -> Optional[tuple[int, int]]:
+        if not token:
+            return None
+        letters = ''.join(filter(str.isalpha, token))
+        digits = ''.join(filter(str.isdigit, token))
+        if not letters or not digits:
+            return None
+        row = int(digits) - 1
+        col = ord(letters.upper()) - ord('A')
+        return row, col
+
+    @staticmethod
+    def _translate_corner(identifier: str) -> str:
+        mapping = {
+            'front_left': 'visual_rec.front_left',
+            'front_right': 'visual_rec.front_right',
+            'back_left': 'visual_rec.back_left',
+            'back_right': 'visual_rec.back_right',
+            'back': 'visual_rec.back_center',
+        }
+        return _(mapping.get(identifier, 'visual_rec.front_left'))
