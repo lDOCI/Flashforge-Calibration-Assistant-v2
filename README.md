@@ -4,13 +4,9 @@
 
 # Flashforge Calibration Assistant
 
-<<<<<<< HEAD
 A helper tool for Flashforge Adventurer 5M/X calibration: visual leveling guidance, bed mesh visualization, quick Input Shaper utilities.
 
 > ⚠️ **Important:** Please update to the latest version immediately — this release fixes multiple critical issues affecting mesh analysis and SSH downloads.
-=======
-A helper tool for Flashforge Adventurer 5M/X calibration: visual leveling guidance, bed mesh visualization, quick Input Shaper utilities — plus a few Easter eggs from the author.
->>>>>>> bbf854bab45be9c94d723c0854376a3124f889b7
 
 </div>
 
@@ -104,11 +100,7 @@ The settings file (`config/app_settings.json`) appears after you save preference
 | **Bed Leveling** | Displays 2D/3D mesh maps, status cards, and access to visual leveling hints. |
 | **Input Shaper** | Load CSV, analyze X/Y axes, and get recommended shapers. |
 | **SSH** | Printer access and downloading of `printer.cfg` and shaper files. |
-<<<<<<< HEAD
 | **Settings** | Equipment setup, thresholds, modes, and author info. |
-=======
-| **Settings** | Equipment setup, thresholds, modes, Easter egg with screw rotation logic, and author info. |
->>>>>>> bbf854bab45be9c94d723c0854376a3124f889b7
 
 The top bar includes theme toggle, language selector, and the “About Author” button.
 
@@ -136,10 +128,6 @@ languages/            # localization JSONs
 ## Developer Notes
 
 - **Virtualenv** — best way to isolate dependencies.  
-<<<<<<< HEAD
-=======
-- **Image Formats** — Qt reads JPEG/PNG/WebP. Replace the Easter egg by placing your own file at `flashforge_app/ui/assets/images/author_easter_egg.webp`.  
->>>>>>> bbf854bab45be9c94d723c0854376a3124f889b7
 - **Localization** — all strings are in `languages/*.json`. Add your language and register keys in `LocalizationService`.  
 - **Visual Guides** — the generation logic is in `visualization/bed_mesh/animated_recommendations.py`. You can expand it with new hint types.  
 - **Themes** — styles live in `flashforge_app/ui/theme/`. Both light and dark schemes are supported, toggleable from the topbar.
@@ -162,11 +150,7 @@ That’s the legacy tkinter version. It’s preserved for reference or lightweig
 ## Feedback
 
 Author — [@I_DOC_I](https://t.me/I_DOC_I).  
-<<<<<<< HEAD
 For all questions — only in the community chat. The author doesn’t reply to private messages.
-=======
-For all questions — only in the community chat. The author doesn’t reply to private messages… unless you’ve found the hidden Easter egg 😉
->>>>>>> bbf854bab45be9c94d723c0854376a3124f889b7
 
 ---
 
@@ -182,13 +166,9 @@ Good calibration and perfect first layers!
 
 # Flashforge Calibration Assistant
 
-<<<<<<< HEAD
 Помощник по калибровке принтера Flashforge Adventurer 5m/x: наглядные рекомендации, визуализация сеток, быстрая работа с Input Shaper.
 
 > ⚠️ **Важно:** срочно обновитесь до последней версии — в этом релизе исправлены несколько критических ошибок анализа сетки и скачивания через SSH.
-=======
-Помощник по калибровке принтера Flashforge Adventurer 5m/x: наглядные рекомендации, визуализация сеток, быстрая работа с Input Shaper и маленькие пасхалки от автора.
->>>>>>> bbf854bab45be9c94d723c0854376a3124f889b7
 
 </div>
 
@@ -281,11 +261,7 @@ python main.py
 | **Bed Leveling** | Отрисовка 2D/3D карт сетки, карточки со статусом, кнопка открытия визуальных рекомендаций. |
 | **Input Shaper** | Загрузка CSV, анализ осей X/Y, вывод рекомендуемых шейперов. |
 | **SSH** | Доступ к принтеру, скачивание `printer.cfg` и файлов шейпера. |
-<<<<<<< HEAD
 | **Settings** | Настройки оборудования, порогов, рабочих режимов и авторские сведения. |
-=======
-| **Settings** | Настройки оборудования, порогов, рабочих режимов, пасхалка c режимом вращения винтов, авторские сведения. |
->>>>>>> bbf854bab45be9c94d723c0854376a3124f889b7
 
 Топбар содержит переключатель темы, выбор языка и кнопку «Автор».
 
@@ -313,10 +289,6 @@ languages/            # json-файлы локализации
 ## Советы разработчикам
 
 - **Virtualenv** — лучший способ держать зависимости под контролем.  
-<<<<<<< HEAD
-=======
-- **Формат изображений** — Qt корректно читает JPEG/PNG/WebP. Если хотите заменить пасхалку, просто положите свой файл по пути `flashforge_app/ui/assets/images/author_easter_egg.webp`.  
->>>>>>> bbf854bab45be9c94d723c0854376a3124f889b7
 - **Международные версии** — все строки идут через `languages/*.json`. Добавьте свой язык и подключите ключи в `LocalizationService`.  
 - **Визуальные рекомендации** — логика генерации графиков находится в `visualization/bed_mesh/animated_recommendations.py`. Можно расширять новые типы подсказок.
 - **Темы** — стили лежат в `flashforge_app/ui/theme/`. Поддерживаются и светлая, и тёмная схемы, переключение — прямо из topbar.
@@ -339,11 +311,7 @@ languages/            # json-файлы локализации
 ## Обратная связь
 
 Автор — [@I_DOC_I](https://t.me/I_DOC_I).  
-<<<<<<< HEAD
 По всем вопросам — только в общий чат сообщества. В личку автор не отвечает.
-=======
-По всем вопросам — только в общий чат сообщества. В личку автор не отвечает… если, конечно, Вы не нашли скрытую пасхалку 😉
->>>>>>> bbf854bab45be9c94d723c0854376a3124f889b7
 
 ---
 
