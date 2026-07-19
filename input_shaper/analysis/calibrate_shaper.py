@@ -4,6 +4,8 @@
 # Copyright (C) 2020  Dmitry Butyugin <dmbutyugin@google.com>
 # Copyright (C) 2020  Kevin O'Connor <kevin@koconnor.net>
 #
+# Modified 2025: imports reworked to run standalone outside a Klipper tree;
+# minor formatting and output changes.
 # This file may be distributed under the terms of the GNU GPLv3 license.
 from __future__ import print_function
 import importlib, optparse, os, sys

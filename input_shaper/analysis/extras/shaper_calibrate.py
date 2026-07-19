@@ -2,6 +2,8 @@
 #
 # Copyright (C) 2020  Dmitry Butyugin <dmbutyugin@google.com>
 #
+# Modified 2025: import of shaper_defs changed for standalone use outside
+# a running Klipper instance.
 # This file may be distributed under the terms of the GNU GPLv3 license.
 import collections, importlib, logging, math, multiprocessing, traceback
 import shaper_defs

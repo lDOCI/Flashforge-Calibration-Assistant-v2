@@ -316,3 +316,10 @@ languages/            # json-файлы локализации
 ---
 
 Удачной калибровки и ровных первых слоёв!
+
+## License
+
+GNU General Public License v3 — see [LICENSE](LICENSE).
+
+This project incorporates code from [Klipper](https://github.com/Klipper3d/klipper)
+(GPL-3.0). See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).

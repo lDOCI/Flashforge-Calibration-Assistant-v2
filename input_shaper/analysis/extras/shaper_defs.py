@@ -2,6 +2,7 @@
 #
 # Copyright (C) 2020-2021  Dmitry Butyugin <dmbutyugin@google.com>
 #
+# Unmodified copy from Klipper (as of 2021).
 # This file may be distributed under the terms of the GNU GPLv3 license.
 import collections, math
 
